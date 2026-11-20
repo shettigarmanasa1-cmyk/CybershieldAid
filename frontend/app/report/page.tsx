@@ -9,15 +9,40 @@ export default function ReportIncident() {
   const [description, setDescription] = useState("");
   const [incidentDate, setIncidentDate] = useState("");
   const [isOngoing, setIsOngoing] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+ 
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();
 
-    // Temporary frontend demonstration.
-    // Backend integration will be added later.
-    setSubmitted(true);
+  try {
+    const response = await fetch(
+      "http://127.0.0.1:8000/api/assessment",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          description: description,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Assessment failed");
+    }
+
+    const result = await response.json();
+
+    sessionStorage.setItem("assessment", JSON.stringify(result));
+
+    window.location.href = "/assessment";
+  } catch (error) {
+    alert("Backend connection failed. Check whether the backend is running.");
+    console.error(error);
   }
+}
+
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -163,11 +188,11 @@ export default function ReportIncident() {
 
           {/* Privacy Notice */}
           <div className="rounded-lg border border-amber-800 bg-amber-950/40 p-4 text-sm text-amber-200">
-            Never share passwords, OTPs, banking PINs,
-            recovery codes or sensitive personal information.
-            This prototype does not yet submit reports to
-            a backend.
-          </div>
+  Never share passwords, OTPs, banking PINs,
+  recovery codes or sensitive personal information.
+  Your incident description will be sent to the
+  CyberFirstAid backend for assessment.
+</div> 
 
           <button
             type="submit"
@@ -176,16 +201,6 @@ export default function ReportIncident() {
             Submit Incident Report
           </button>
 
-          {submitted && (
-            <div
-              role="status"
-              className="rounded-lg border border-cyan-700 bg-cyan-950 p-4 text-center text-cyan-200"
-            >
-              Form completed successfully! This is a frontend
-              demonstration. Your report has not been sent
-              or saved yet.
-            </div>
-          )}
         </form>
       </section>
     </main>

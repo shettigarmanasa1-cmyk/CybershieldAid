@@ -1,10 +1,11 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 type Assessment = {
+  incident_id: number;
   incident_category: string;
   matched_keywords: string[];
   classification_needs_review: boolean;
@@ -16,23 +17,7 @@ type Assessment = {
 
 // Demonstration data based on the AI module's output format.
 // Replace with the backend API response during integration.
-const demoAssessment: Assessment = {
-  incident_category: "financial_fraud",
-  matched_keywords: ["otp", "bank"],
-  classification_needs_review: false,
-  risk_level: "critical",
-  immediate_actions: [
-    "Contact your bank or payment provider immediately through its official app or verified phone number.",
-    "If you are in India, report financial cyber fraud through the 1930 helpline.",
-    "Secure affected banking accounts using official support channels.",
-  ],
-  follow_up_actions: [
-    "Save transaction IDs, messages, receipts and relevant screenshots.",
-    "Report the incident at cybercrime.gov.in.",
-    "Monitor affected accounts for suspicious activity.",
-  ],
-  needs_review: false,
-};
+
 
 const categoryNames: Record<string, string> = {
   financial_fraud: "Financial Fraud",
@@ -46,7 +31,34 @@ const categoryNames: Record<string, string> = {
 };
 
 export default function AssessmentPage() {
-  const [assessment] = useState<Assessment>(demoAssessment);
+  const [assessment, setAssessment] = useState<Assessment | null>(null);
+
+useEffect(() => {
+  const savedAssessment = sessionStorage.getItem("assessment");
+
+  if (savedAssessment) {
+    // This effect synchronizes React state with browser storage.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAssessment(JSON.parse(savedAssessment));
+  }
+}, []);
+if (!assessment) {
+  return (
+    <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">
+          Loading Assessment...
+        </h1>
+        <p className="text-slate-400">
+          Please wait while we load your incident results.
+        </p>
+        <Link href="/report" className="text-cyan-400 underline mt-4 inline-block">
+          Submit an incident report
+        </Link>
+      </div>
+    </main>
+  );
+}
 
   const riskColors: Record<string, string> = {
     critical: "border-red-600 bg-red-950 text-red-300",
@@ -82,10 +94,7 @@ export default function AssessmentPage() {
             safety actions for your cyber incident.
           </p>
 
-          <p className="mt-3 text-sm text-amber-300">
-            Demonstration assessment — not generated from your
-            submitted incident yet.
-          </p>
+        
         </div>
 
         {/* Assessment Summary */}
@@ -210,7 +219,14 @@ export default function AssessmentPage() {
             className="rounded-xl border border-slate-600 px-6 py-4 font-semibold hover:bg-slate-800"
           >
             Report Another Incident
-          </Link>
+            </Link>
+            <Link
+  href={`/recovery?incident_id=${assessment.incident_id}`}
+  className="rounded-xl bg-cyan-600 px-6 py-4 font-semibold text-white hover:bg-cyan-500"
+>
+  Start Recovery Tracker
+</Link>
+          
         </div>
       </section>
     </main>

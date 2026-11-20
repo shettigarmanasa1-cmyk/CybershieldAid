@@ -2,41 +2,39 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Incident = {
-  id: string;
-  category: string;
-  date: string;
-  risk: "Critical" | "High" | "Medium" | "Low";
+  
+  incident_id: number;
+  description: string;
+  incident_category: string;
+  risk_level: string;
+  created_at: string;
+  needs_review: boolean;
   status: string;
 };
 
-const demoIncidents: Incident[] = [
-  {
-    id: "CFA-001",
-    category: "Financial Fraud",
-    date: "2026-11-15",
-    risk: "Critical",
-    status: "Action Required",
-  },
-  {
-    id: "CFA-002",
-    category: "Phishing",
-    date: "2026-11-14",
-    risk: "High",
-    status: "In Progress",
-  },
-  {
-    id: "CFA-003",
-    category: "Account Hacking",
-    date: "2026-11-12",
-    risk: "Medium",
-    status: "Resolved",
-  },
-];
 
-const quickActions = [
+
+function riskColor(risk: string) {
+  switch (risk.toLowerCase()) {
+    case "critical":
+      return "bg-red-950 text-red-300";
+    case "high":
+      return "bg-orange-950 text-orange-300";
+    case "medium":
+      return "bg-yellow-950 text-yellow-300";
+    default:
+      return "bg-green-950 text-green-300";
+  }
+}
+
+export default function DashboardPage() {
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const quickActions = [
   {
     title: "Report Incident",
     description: "Submit details of a cyber incident.",
@@ -62,43 +60,53 @@ const quickActions = [
     href: "/evidence",
   },
   {
-    title: "Recovery Tracker",
-    description: "Manage your recovery checklist.",
-    icon: "📊",
-    href: "/recovery",
+    
+  title: "Recovery Tracker",
+  description: "Manage your recovery checklist.",
+  icon: "📊",
+  href: incidents.length > 0
+    ? `/recovery?incident_id=${incidents[0].incident_id}`
+    : "/recovery",
+
   },
 ];
 
-function riskColor(risk: Incident["risk"]) {
-  switch (risk) {
-    case "Critical":
-      return "bg-red-950 text-red-300";
-    case "High":
-      return "bg-orange-950 text-orange-300";
-    case "Medium":
-      return "bg-yellow-950 text-yellow-300";
-    default:
-      return "bg-green-950 text-green-300";
-  }
-}
+  useEffect(() => {
+    async function loadIncidents() {
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:8000/api/incidents"
+        );
 
-export default function DashboardPage() {
-  const [incidents] = useState<Incident[]>(demoIncidents);
+        if (!response.ok) {
+          throw new Error("Could not load incidents");
+        }
 
-  const totalIncidents = incidents.length;
+        const data: Incident[] = await response.json();
+        setIncidents(data);
+      } catch {
+        setError("Unable to connect to the backend.");
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  const activeIncidents = incidents.filter(
-    (incident) => incident.status !== "Resolved"
-  ).length;
+    loadIncidents();
+  }, []);
 
-  const criticalIncidents = incidents.filter(
-    (incident) => incident.risk === "Critical"
-  ).length;
+ const totalIncidents = incidents.length;
 
-  const resolvedIncidents = incidents.filter(
-    (incident) => incident.status === "Resolved"
-  ).length;
+const activeIncidents = incidents.filter(
+  (incident) => incident.status === "active"
+).length;
 
+const criticalIncidents = incidents.filter(
+  (incident) => incident.risk_level === "critical"
+).length;
+
+const resolvedIncidents = incidents.filter(
+  (incident) => incident.status === "resolved"
+).length;
   const stats = [
     {
       title: "Total Incidents",
@@ -160,7 +168,7 @@ export default function DashboardPage() {
           </Link>
 
           <Link
-            href="/recovery"
+            href={incidents.length > 0 ? `/recovery?incident_id=${incidents[0].incident_id}` : "/recovery"}
             className="text-slate-300 hover:text-cyan-400"
           >
             Recovery
@@ -256,12 +264,11 @@ export default function DashboardPage() {
           </div>
 
           <p className="mb-5 text-sm text-amber-300">
-            Sample incidents shown for demonstration only.
-            These are not real reports or saved user records.
+            Showing incidents retrieved from the CyberFirstAid database.
           </p>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[650px] text-left">
+            <table className="w-full min-w-162.5 text-left">
               <thead className="border-b border-slate-700 text-sm text-slate-400">
                 <tr>
                   <th className="px-4 py-4">Incident ID</th>
@@ -272,40 +279,51 @@ export default function DashboardPage() {
                 </tr>
               </thead>
 
-              <tbody>
-                {incidents.map((incident) => (
-                  <tr
-                    key={incident.id}
-                    className="border-b border-slate-800 text-sm"
-                  >
-                    <td className="px-4 py-5 font-semibold text-cyan-400">
-                      {incident.id}
-                    </td>
+              
+<tbody>
+  {loading ? (
+    <tr>
+      <td colSpan={5} className="px-4 py-5 text-center">
+        Loading incidents...
+      </td>
+    </tr>
+  ) : error ? (
+    <tr>
+      <td colSpan={5} className="px-4 py-5 text-center text-red-400">
+        {error}
+      </td>
+    </tr>
+  ) : incidents.length === 0 ? (
+    <tr>
+      <td colSpan={5} className="px-4 py-5 text-center text-slate-400">
+        No incidents have been reported yet.
+      </td>
+    </tr>
+  ) : (
+    incidents.map((incident) => (
+      <tr key={incident.incident_id} className="border-b border-slate-800 text-sm">
+        <td className="px-4 py-5 font-semibold text-cyan-400">
+          {incident.incident_id}
+        </td>
+        <td className="px-4 py-5">
+          {incident.incident_category.replaceAll("_", " ")}
+        </td>
+        <td className="px-4 py-5 text-slate-300">
+          {new Date(incident.created_at).toLocaleDateString()}
+        </td>
+        <td className="px-4 py-5">
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${riskColor(incident.risk_level)}`}>
+            {incident.risk_level}
+          </span>
+        </td>
+        <td className="px-4 py-5 text-slate-300">
+          {incident.status === "resolved" ? "Resolved" : "Active"}
+        </td>
+      </tr>
+    ))
+  )}
+</tbody>
 
-                    <td className="px-4 py-5">
-                      {incident.category}
-                    </td>
-
-                    <td className="px-4 py-5 text-slate-300">
-                      {incident.date}
-                    </td>
-
-                    <td className="px-4 py-5">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${riskColor(
-                          incident.risk
-                        )}`}
-                      >
-                        {incident.risk}
-                      </span>
-                    </td>
-
-                    <td className="px-4 py-5 text-slate-300">
-                      {incident.status}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
             </table>
           </div>
         </section>
@@ -400,8 +418,7 @@ export default function DashboardPage() {
         <footer className="mt-12 border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
           CyberFirstAid | Academic Prototype
           <p className="mt-2">
-            Dashboard information is demonstration data
-            until backend integration is completed.
+            Dashboard incidents are retrieved from the backend database.
           </p>
         </footer>
       </div>
